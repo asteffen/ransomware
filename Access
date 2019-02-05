@@ -1,0 +1,5 @@
+Terminal Command
+1. ssh -i key1-andrew.pem ubuntu@18.188.12.32
+2. cd git/CECS378 // change directionary
+3. git pull 
+4. cat README.md
