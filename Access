@@ -3,3 +3,15 @@ Terminal Command
 2. cd git/CECS378 // change directionary
 3. git pull 
 4. cat README.md
+
+
+Edit file
+1. nano fileName
+2. edit 
+3. save (cotrol o)
+4. close nano (control x)
+5. git add fileName
+5. git commit -m "message"
+6. git push
+7. Username password
+8. refresh github
