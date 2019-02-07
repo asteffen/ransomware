@@ -1,3 +1,3 @@
 # CECS378
-It is Feb 7th.
+It is Feb 7th...  
 Tomorrow
