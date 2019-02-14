@@ -15,3 +15,10 @@ Edit file
 6. git push
 7. Username password
 8. refresh github
+
+Change User from Ubuntu
+git config --global user.email "xinbeishen@gmail.com"
+git config --global user.name "beibeijoy"
+ls    // list folder
+git  nginx_signing.key 
+cd git    // change directiory
