@@ -22,3 +22,8 @@ git config --global user.name "beibeijoy"
 ls    // list folder
 git  nginx_signing.key 
 cd git    // change directiory
+
+
+Fix Node Server
+1. go to help
+2. comment the line of the part mattered
