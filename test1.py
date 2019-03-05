@@ -10,8 +10,8 @@ BITS_PER_BYTE = 8
 
 def getHMAC(data, key):
     h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
-    #h.update(b"message to hash")
-    #h.finalize()
+    h.update(data)
+    return h.finalize()
 
 # Inputs
 #   message: bytes
@@ -41,6 +41,11 @@ def myEncrypt(message, key):
 
     ct = bytes(buf[:len_encrypted]) + encryptor.finalize()
     return (iv, ct)
+
+def myEncryptMAC(message, EncKey, HMACKey):
+    (iv, ct) = myEncrypt(message, EncKey)
+    tag = getHMAC(message, HMACKey)
+    return (ct, iv, tag)
 
 # Inputs
 #   ct: bytes
@@ -137,7 +142,38 @@ def test_file_enc_dec():
     i = input()
     myFileDecrypt(filepath, iv, key)
 
-test_file_enc_dec()
+def test_HMAC():
+    data = b"message to hash"
+    key = urandom(KEY_SIZE_BYTES)
+
+    h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
+    h.update(data)
+    sig1 = h.finalize()
+
+    print(sig1)
+
+    h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
+    h.update(data)
+    h.verify(sig1)
+
+def test_myEncryptMAC():
+    message = b"secret message"
+    EncKey = urandom(KEY_SIZE_BYTES)
+    HMACKey = urandom(KEY_SIZE_BYTES)
+    (ct, iv, tag) = myEncryptMAC(message, EncKey, HMACKey)
+    print("ct = ")
+    print(ct)
+    print("iv = ")
+    print(iv)
+    print("tag = ")
+    print(tag)
+
+    message2 = myDecrypt(ct, iv, EncKey)
+    print(message2)
+
+test_myEncryptMAC()
+#test_HMAC()
+#test_file_enc_dec()
 #test_enc_dec()
 
 #test_padding_functions()
