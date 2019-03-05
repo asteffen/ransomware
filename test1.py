@@ -1,22 +1,30 @@
-import os
+from os import urandom
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
-from cryptography.hazmat.primitives import padding
+from cryptography.hazmat.primitives import padding, hashes, hmac
 
 BLOCK_SIZE_BYTES = 16
+IV_SIZE_BYTES = 16
+KEY_SIZE_BYTES = 32
+BITS_PER_BYTE = 8
+
+def getHMAC(data, key):
+    h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
+    #h.update(b"message to hash")
+    #h.finalize()
 
 # Inputs
-# message: bytes
-# key: bytes
+#   message: bytes
+#   key: bytes
 # Outputs
-# iv: bytes
-# ct: bytes
+#   iv: bytes
+#   ct: bytes
 def myEncrypt(message, key):
-    if len(key) < 32:
-        raise Exception("Key is less than 32 bytes.")
+    if len(key) < KEY_SIZE_BYTES:
+        raise Exception("Key length is too small")
 
     backend = default_backend()
-    iv = os.urandom(16)
+    iv = urandom(IV_SIZE_BYTES)
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
     encryptor = cipher.encryptor()
 
@@ -35,11 +43,11 @@ def myEncrypt(message, key):
     return (iv, ct)
 
 # Inputs
-# ct: bytes
-# iv: bytes
-# key: bytes
+#   ct: bytes
+#   iv: bytes
+#   key: bytes
 # Output
-# message : bytes
+#   message : bytes
 def myDecrypt(ct, iv, key):
     backend = default_backend()
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
@@ -59,9 +67,9 @@ def myDecrypt(ct, iv, key):
     #return message.decode("utf-8")
     return message
 
-# (C, IV, key, ext) = MyfileEncrypt(filepath):
+# (C, IV, key, ext) = MyfileEncrypt(filepath)
 def myFileEncrypt(filepath):
-    key = os.urandom(32)
+    key = urandom(KEY_SIZE_BYTES)
 
     fr = open(filepath, "rb")
     message = fr.read()
@@ -89,7 +97,7 @@ def myFileDecrypt(filepath, iv, key):
 # https://cryptography.io/en/latest/hazmat/primitives/padding/
 # Input: data as bytes
 def pad_data(data):
-    padder = padding.PKCS7(8 * BLOCK_SIZE_BYTES).padder()
+    padder = padding.PKCS7(BITS_PER_BYTE * BLOCK_SIZE_BYTES).padder()
     padded_data = padder.update(data)
     padded_data += padder.finalize()
     return padded_data
@@ -97,20 +105,20 @@ def pad_data(data):
 # Removes PKCS7 padding.
 # Input: padded_data as bytes
 def unpad_data(padded_data):
-    unpadder = padding.PKCS7(8 * BLOCK_SIZE_BYTES).unpadder()
+    unpadder = padding.PKCS7(BITS_PER_BYTE * BLOCK_SIZE_BYTES).unpadder()
     data = unpadder.update(padded_data)
     data += unpadder.finalize()
     return data
 
 def test_padding_functions():
-    d = b"123456789x1234567"
+    d = b"123456789x123456789x"
     pd = pad_data(d)
     print(pd)
     d2 = unpad_data(pd)
     print(d2)
 
 def test_enc_dec():
-    key = os.urandom(32)
+    key = urandom(KEY_SIZE_BYTES)
     iv, ct = myEncrypt(b"a secret message12345", key)
     print(iv)
     print(ct)
@@ -118,8 +126,8 @@ def test_enc_dec():
     print(message)
 
 def test_file_enc_dec():
-    #filepath = "demofile.txt"
-    filepath = "cat.jpg"
+    filepath = "demofile.txt"
+    #filepath = "cat.jpg"
 
     print("Press enter to encrypt the file.")
     i = input()
@@ -132,3 +140,4 @@ def test_file_enc_dec():
 test_file_enc_dec()
 #test_enc_dec()
 
+#test_padding_functions()
