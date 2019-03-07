@@ -8,6 +8,8 @@ IV_SIZE_BYTES = 16
 KEY_SIZE_BYTES = 32
 BITS_PER_BYTE = 8
 
+# for example: b'#F\xdaI\x8b"e\xc4\xf1\xbb\x9a\x8fc\xff\xf5\xdex.
+# \xbc\xcd/+\x8a\x86\x1d\x84\'\xc3\xa6\x1d\xd8J'
 def getHMAC(data, key):
     h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
     h.update(data)
@@ -19,11 +21,15 @@ def getHMAC(data, key):
 # Outputs
 #   iv: bytes
 #   ct: bytes
+
+#(C, IV)= Myencrypt(message, key)
 def myEncrypt(message, key):
     if len(key) < KEY_SIZE_BYTES:
         raise Exception("Key length is too small")
 
+    # Construct an AES-GCM Cipher object with the given key 
     backend = default_backend()
+    # and a randomly generated IV.
     iv = urandom(IV_SIZE_BYTES)
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
     encryptor = cipher.encryptor()
@@ -37,8 +43,11 @@ def myEncrypt(message, key):
     n = BLOCK_SIZE_BYTES
     bufsize = len(message_padded) + n - 1
     buf = bytearray(bufsize)
+    # update_into(data, buf)
+    # return int: Number of bytes written.
     len_encrypted = encryptor.update_into(message_padded, buf)
 
+    # Encrypt the plaintext and get the associated ciphertext.
     ct = bytes(buf[:len_encrypted]) + encryptor.finalize()
     return (iv, ct)
 
@@ -53,6 +62,8 @@ def myEncryptMAC(message, EncKey, HMACKey):
 #   key: bytes
 # Output
 #   message : bytes
+
+#(message) = myDecrypt(CT, IV, Key)
 def myDecrypt(ct, iv, key):
     backend = default_backend()
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
@@ -63,6 +74,8 @@ def myDecrypt(ct, iv, key):
     n = BLOCK_SIZE_BYTES
     bufsize = len(ct) + n - 1
     buf = bytearray(bufsize)
+    # update_into(data, buf)
+    # return int: Number of bytes written.
     len_decrypted = decryptor.update_into(ct, buf)
     
     # get the plaintext from the buffer reading only the bytes written (len_decrypted)
@@ -122,6 +135,7 @@ def test_padding_functions():
     d2 = unpad_data(pd)
     print(d2)
 
+# Test info
 def test_enc_dec():
     key = urandom(KEY_SIZE_BYTES)
     iv, ct = myEncrypt(b"a secret message12345", key)
