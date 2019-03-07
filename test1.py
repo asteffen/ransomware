@@ -13,6 +13,10 @@ def getHMAC(data, key):
     h.update(data)
     return h.finalize()
 
+def getExt(filepath):
+    strArray = filepath.split(".")
+    return strArray[-1]
+
 # Inputs
 #   message: bytes
 #   key: bytes
@@ -40,12 +44,28 @@ def myEncrypt(message, key):
     len_encrypted = encryptor.update_into(message_padded, buf)
 
     ct = bytes(buf[:len_encrypted]) + encryptor.finalize()
-    return (iv, ct)
+    return (ct, iv)
 
 def myEncryptMAC(message, EncKey, HMACKey):
-    (iv, ct) = myEncrypt(message, EncKey)
+    (ct, iv) = myEncrypt(message, EncKey)
     tag = getHMAC(message, HMACKey)
     return (ct, iv, tag)
+
+# (C, IV, tag, Enckey, HMACKey, ext)= MyfileEncryptMAC (filepath)
+def myFileEncryptMAC(filepath):
+    encKey = urandom(KEY_SIZE_BYTES)
+    HMACKey = urandom(KEY_SIZE_BYTES)
+
+    fr = open(filepath, "rb")
+    message = fr.read()
+    (ct, iv) = myEncrypt(message, encKey)
+
+    fw = open(filepath, "wb")
+    fw.write(ct)
+
+    ext = getExt(filepath)
+    tag = getHMAC(message, HMACKey)
+    return (ct, iv, tag, encKey, HMACKey, ext)
 
 # Inputs
 #   ct: bytes
@@ -79,12 +99,14 @@ def myFileEncrypt(filepath):
     fr = open(filepath, "rb")
     message = fr.read()
 
-    (iv, ct) = myEncrypt(message, key)
+    (ct, iv) = myEncrypt(message, key)
 
     fw = open(filepath, "wb")
     fw.write(ct)
 
-    return (ct, iv, key)
+    ext = getExt(filepath)
+
+    return (ct, iv, key, ext)
 
 def myFileDecrypt(filepath, iv, key):
     fr = open(filepath, "rb")
@@ -124,7 +146,7 @@ def test_padding_functions():
 
 def test_enc_dec():
     key = urandom(KEY_SIZE_BYTES)
-    iv, ct = myEncrypt(b"a secret message12345", key)
+    (ct, iv) = myEncrypt(b"a secret message12345", key)
     print(iv)
     print(ct)
     message = myDecrypt(ct, iv, key)
@@ -136,7 +158,8 @@ def test_file_enc_dec():
 
     print("Press enter to encrypt the file.")
     i = input()
-    (ct, iv, key) = myFileEncrypt(filepath)
+    (ct, iv, key, ext) = myFileEncrypt(filepath)
+    print("ext = " + ext)
 
     print("Press enter to decrypt the file.")
     i = input()
@@ -171,9 +194,13 @@ def test_myEncryptMAC():
     message2 = myDecrypt(ct, iv, EncKey)
     print(message2)
 
-test_myEncryptMAC()
+def test_myFileEncryptMAC():
+    filepath = "demofile.txt"
+    #(ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC()
+
+#test_myEncryptMAC()
 #test_HMAC()
-#test_file_enc_dec()
+test_file_enc_dec()
 #test_enc_dec()
 
 #test_padding_functions()
