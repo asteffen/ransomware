@@ -3,9 +3,11 @@ from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding, hashes, hmac
 
+# Constants
 BLOCK_SIZE_BYTES = 16
 IV_SIZE_BYTES = 16
 KEY_SIZE_BYTES = 32
+HMAC_KEY_SIZE_BYTES = 16
 BITS_PER_BYTE = 8
 
 # for example: b'#F\xdaI\x8b"e\xc4\xf1\xbb\x9a\x8fc\xff\xf5\xdex.
@@ -26,10 +28,11 @@ def getExt(filepath):
 #   iv: bytes
 #   ct: bytes
 
-#(C, IV)= Myencrypt(message, key)
+# (C, IV)= Myencrypt(message, key)
 def myEncrypt(message, key):
     if len(key) < KEY_SIZE_BYTES:
         raise Exception("Key length is too small")
+        return
 
     # Construct an AES-GCM Cipher object with the given key 
     backend = default_backend()
@@ -55,15 +58,28 @@ def myEncrypt(message, key):
     ct = bytes(buf[:len_encrypted]) + encryptor.finalize()
     return (ct, iv)
 
+# Encrypt then MAC
 def myEncryptMAC(message, EncKey, HMACKey):
     (ct, iv) = myEncrypt(message, EncKey)
-    tag = getHMAC(message, HMACKey)
+    tag = getHMAC(ct, HMACKey)
     return (ct, iv, tag)
+
+# Verify then decrypt
+def myDecryptMAC(ct, iv, tag, HMACKey, EncKey):
+    tag2 = getHMAC(ct, HMACKey)
+
+    if tag2 != tag:
+        raise Exception("The tag is not valid.")
+        return
+
+    message = myDecrypt(ct, iv, EncKey)
+    return message
+
 
 # (C, IV, tag, Enckey, HMACKey, ext)= MyfileEncryptMAC (filepath)
 def myFileEncryptMAC(filepath):
     encKey = urandom(KEY_SIZE_BYTES)
-    HMACKey = urandom(KEY_SIZE_BYTES)
+    HMACKey = urandom(HMAC_KEY_SIZE_BYTES)
 
     fr = open(filepath, "rb")
     message = fr.read()
@@ -73,7 +89,10 @@ def myFileEncryptMAC(filepath):
     fw.write(ct)
 
     ext = getExt(filepath)
-    tag = getHMAC(message, HMACKey)
+
+    # The input for the HMAC is the ciphertext, not the message.
+    # Because we are doing Encrypt-then-MAC.
+    tag = getHMAC(ct, HMACKey)
     return (ct, iv, tag, encKey, HMACKey, ext)
 
 # Inputs
@@ -161,10 +180,10 @@ def test_padding_functions():
 def test_enc_dec():
     key = urandom(KEY_SIZE_BYTES)
     (ct, iv) = myEncrypt(b"a secret message12345", key)
-    print(iv)
-    print(ct)
+    print("iv = " + str(iv))
+    print("ct = " + str(ct))
     message = myDecrypt(ct, iv, key)
-    print(message)
+    print("message = " + str(message))
 
 def test_file_enc_dec():
     filepath = "demofile.txt"
@@ -196,7 +215,7 @@ def test_HMAC():
 def test_myEncryptMAC():
     message = b"secret message"
     EncKey = urandom(KEY_SIZE_BYTES)
-    HMACKey = urandom(KEY_SIZE_BYTES)
+    HMACKey = urandom(HMAC_KEY_SIZE_BYTES)
     (ct, iv, tag) = myEncryptMAC(message, EncKey, HMACKey)
     print("ct = ")
     print(ct)
@@ -205,7 +224,8 @@ def test_myEncryptMAC():
     print("tag = ")
     print(tag)
 
-    message2 = myDecrypt(ct, iv, EncKey)
+    #message2 = myDecryptMAC(ct, iv, tag, HMACKey, EncKey)
+    message2 = myDecryptMAC(b"bad", iv, tag, HMACKey, EncKey)
     print(message2)
 
 def test_myFileEncryptMAC():
@@ -214,7 +234,9 @@ def test_myFileEncryptMAC():
 
 #test_myEncryptMAC()
 #test_HMAC()
-test_file_enc_dec()
+#test_file_enc_dec()
 #test_enc_dec()
-
 #test_padding_functions()
+test_myEncryptMAC()
+
+
