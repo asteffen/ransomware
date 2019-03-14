@@ -10,27 +10,32 @@ IV_SIZE_BYTES = 16
 KEY_SIZE_BYTES = 32
 HMAC_KEY_SIZE_BYTES = 16
 BITS_PER_BYTE = 8
+DEBUG = False
 
-# for example: b'#F\xdaI\x8b"e\xc4\xf1\xbb\x9a\x8fc\xff\xf5\xdex.
-# \xbc\xcd/+\x8a\x86\x1d\x84\'\xc3\xa6\x1d\xd8J'
+# Using a constant HMACKey to make it possible to demo.
+def getHMACKey():
+    #return urandom(HMAC_KEY_SIZE_BYTES)
+    return b'\xffN[\xa7\x93\x9d8\xea!\x15\xb2^=\xebQ\xd1'
+
+# Get HMAC for the data and key.
 def getHMAC(data, key):
     h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
     h.update(data)
     return h.finalize()
 
-# From hello.txt, return ("hello", "txt")
+# For filepath=hello.txt, return ("hello", "txt")
 def getExt(filepath):
     i = len(filepath) - 1
     while i >= 0:
         if filepath[i] == ".":
             break
         i -= 1
+    if i == -1:
+        raise Exception("Filepath does not contain a period.")
 
     ext = filepath[(i+1):]
     name = filepath[:i]
     return (name, ext)
-
-
 
 # Inputs
 #   message: bytes
@@ -91,11 +96,13 @@ def myFileEncrypt(filepath):
 
     fr = open(filepath, "rb")
     message = fr.read()
+    fr.close()
 
     (ct, iv) = myEncrypt(message, key)
 
     fw = open(filepath, "wb")
     fw.write(ct)
+    fw.close()
 
     ext = getExt(filepath)
 
@@ -107,18 +114,17 @@ def bytesToString(b):
 
 def stringToBytes(s):
     #return s.encode('utf-8', 'backslashreplace')
-    #return s.encode('utf-8')
-    #return s.decode('unicode-escape').encode('utf-8')
     return s.encode('cp437')
 
 # (C, IV, tag, Enckey, HMACKey, ext)= MyfileEncryptMAC (filepath)
 def myFileEncryptMAC(filepath):
     encKey = urandom(KEY_SIZE_BYTES)
-    HMACKey = urandom(HMAC_KEY_SIZE_BYTES)
+    HMACKey = getHMACKey()
 
     fr = open(filepath, "rb")
     message = fr.read()
     (ct, iv) = myEncrypt(message, encKey)
+    fr.close()
 
     (name, ext) = getExt(filepath)
 
@@ -132,27 +138,31 @@ def myFileEncryptMAC(filepath):
     ctStr = bytesToString(ct)
     tagStr = bytesToString(tag)
 
-    dict1 = {'constant': 'enc', 'encKey': encKeyStr, 'IV': ivStr, 'ciphertext': ctStr, 'ext': ext, 'tag': tagStr}
+    jsonDict = {'constant': 'enc', 'encKey': encKeyStr, 'IV': ivStr, 'ciphertext': ctStr, 'ext': ext, 'tag': tagStr}
 
     newFilepath = name + ".json"
-
     fw = open(newFilepath, "w")
-    fw.write(dumps(dict1))
+    fw.write(dumps(jsonDict))
+    fw.close()
 
-    print("HMac in encrypt")
-    print(HMACKey)
-    print("ct in encrypt")
-    print(ct)
+    if DEBUG:
+        print("HMac in encrypt")
+        print(HMACKey)
+        print("ct in encrypt")
+        print(ct)
 
-    # Remove the original file
-    # remove(filepath)
+    # Delete the original file.
+    remove(filepath)
 
-    
     return (ct, iv, tag, encKey, HMACKey, ext)
 
 def myFileDecryptMAC(filepath, HMACKey):
     fr = open(filepath, "r")
     fileContent = fr.read()
+    fr.close()
+
+    # Delete the json file.
+    remove(filepath)
 
     jsonDict = loads(fileContent)
 
@@ -162,17 +172,23 @@ def myFileDecryptMAC(filepath, HMACKey):
     ct = stringToBytes(jsonDict['ciphertext'])
     tag = stringToBytes(jsonDict['tag'])
 
-    #print(ct)
-    print("HMac in decrypt")
-    print(HMACKey)
-    print("ct in decrypt")
-    print(ct)
+    if DEBUG:
+        print("HMac in decrypt")
+        print(HMACKey)
+        print("ct in decrypt")
+        print(ct)
 
-    tag2 = getHMAC(ct, HMACKey)
+    # myDecryptMAC will recompute the tag and raise an error if the tag is invalid.
+    message = myDecryptMAC(ct, iv, tag, HMACKey, encKey)
 
-    if tag2 != tag:
-        raise Exception("The tag is not valid.")
-        return
+    (name, ext2) = getExt(filepath)
+    origFilepath = name + "." + ext
+    
+    fw = open(origFilepath, "wb")
+    fw.write(message)
+    fw.close()
+
+    return message
 
 
 # Inputs
@@ -206,11 +222,13 @@ def myDecrypt(ct, iv, key):
 def myFileDecrypt(filepath, iv, key):
     fr = open(filepath, "rb")
     ct = fr.read()
+    fr.close()
 
     message = myDecrypt(ct, iv, key)
 
     fw = open(filepath, "wb")
     fw.write(message)
+    fw.close()
 
     return (message, iv, key)
 
@@ -261,6 +279,30 @@ def test_file_enc_dec():
     i = input()
     myFileDecrypt(filepath, iv, key)
 
+def demo_HMAC_file():
+    filepath = "demofile.txt"
+    #filepath = "cat.jpg"
+
+    print("Press enter to encrypt the file.")
+    i = input()
+    (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC(filepath)
+
+    HMACKey = getHMACKey()
+    filepath2 = "demofile.json"
+
+    print("Press enter to decrypt the file.")
+    i = input()
+    message = myFileDecryptMAC(filepath2, HMACKey)
+
+def test_myFileDecryptMAC():
+    filepath = "demofile.txt"
+    (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC(filepath)
+
+    filepath = "demofile.json"
+    message = myFileDecryptMAC(filepath, HMACKey)
+
+    print(message)
+
 def test_HMAC():
     data = b"message to hash"
     key = urandom(KEY_SIZE_BYTES)
@@ -296,13 +338,6 @@ def test_myFileEncryptMAC():
     #(ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC()
     (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC(filepath)
 
-def test_myFileDecryptMAC():
-    filepath = "demofile.txt"
-    (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC(filepath)
-
-    filepath = "demofile.json"
-    myFileDecryptMAC(filepath, HMACKey)
-
 def test_json():
     r = {'is_claimed': 'True', 'rating': 3.5}
     str1 = dumps(r)
@@ -333,5 +368,6 @@ def test_decode():
 
 #test_myFileEncryptMAC()
 #test_decode()
-test_myFileDecryptMAC()
+#test_myFileDecryptMAC()
+demo_HMAC_file()
 
