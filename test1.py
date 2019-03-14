@@ -1,7 +1,8 @@
-from os import urandom
+from os import urandom, remove
 from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import padding, hashes, hmac
+from json import dumps, loads
 
 # Constants
 BLOCK_SIZE_BYTES = 16
@@ -17,9 +18,19 @@ def getHMAC(data, key):
     h.update(data)
     return h.finalize()
 
+# From hello.txt, return ("hello", "txt")
 def getExt(filepath):
-    strArray = filepath.split(".")
-    return strArray[-1]
+    i = len(filepath) - 1
+    while i >= 0:
+        if filepath[i] == ".":
+            break
+        i -= 1
+
+    ext = filepath[(i+1):]
+    name = filepath[:i]
+    return (name, ext)
+
+
 
 # Inputs
 #   message: bytes
@@ -27,7 +38,6 @@ def getExt(filepath):
 # Outputs
 #   iv: bytes
 #   ct: bytes
-
 # (C, IV)= Myencrypt(message, key)
 def myEncrypt(message, key):
     if len(key) < KEY_SIZE_BYTES:
@@ -75,6 +85,31 @@ def myDecryptMAC(ct, iv, tag, HMACKey, EncKey):
     message = myDecrypt(ct, iv, EncKey)
     return message
 
+# (C, IV, key, ext) = MyfileEncrypt(filepath)
+def myFileEncrypt(filepath):
+    key = urandom(KEY_SIZE_BYTES)
+
+    fr = open(filepath, "rb")
+    message = fr.read()
+
+    (ct, iv) = myEncrypt(message, key)
+
+    fw = open(filepath, "wb")
+    fw.write(ct)
+
+    ext = getExt(filepath)
+
+    return (ct, iv, key, ext)
+
+def bytesToString(b):
+    #return b.decode('utf-8', 'backslashreplace')
+    return b.decode('cp437')
+
+def stringToBytes(s):
+    #return s.encode('utf-8', 'backslashreplace')
+    #return s.encode('utf-8')
+    #return s.decode('unicode-escape').encode('utf-8')
+    return s.encode('cp437')
 
 # (C, IV, tag, Enckey, HMACKey, ext)= MyfileEncryptMAC (filepath)
 def myFileEncryptMAC(filepath):
@@ -85,15 +120,60 @@ def myFileEncryptMAC(filepath):
     message = fr.read()
     (ct, iv) = myEncrypt(message, encKey)
 
-    fw = open(filepath, "wb")
-    fw.write(ct)
-
-    ext = getExt(filepath)
+    (name, ext) = getExt(filepath)
 
     # The input for the HMAC is the ciphertext, not the message.
     # Because we are doing Encrypt-then-MAC.
     tag = getHMAC(ct, HMACKey)
+
+    # Convert bytes variables to string
+    encKeyStr = bytesToString(encKey)
+    ivStr = bytesToString(iv)
+    ctStr = bytesToString(ct)
+    tagStr = bytesToString(tag)
+
+    dict1 = {'constant': 'enc', 'encKey': encKeyStr, 'IV': ivStr, 'ciphertext': ctStr, 'ext': ext, 'tag': tagStr}
+
+    newFilepath = name + ".json"
+
+    fw = open(newFilepath, "w")
+    fw.write(dumps(dict1))
+
+    print("HMac in encrypt")
+    print(HMACKey)
+    print("ct in encrypt")
+    print(ct)
+
+    # Remove the original file
+    # remove(filepath)
+
+    
     return (ct, iv, tag, encKey, HMACKey, ext)
+
+def myFileDecryptMAC(filepath, HMACKey):
+    fr = open(filepath, "r")
+    fileContent = fr.read()
+
+    jsonDict = loads(fileContent)
+
+    ext = jsonDict['ext']
+    encKey = stringToBytes(jsonDict['encKey'])
+    iv = stringToBytes(jsonDict['IV'])
+    ct = stringToBytes(jsonDict['ciphertext'])
+    tag = stringToBytes(jsonDict['tag'])
+
+    #print(ct)
+    print("HMac in decrypt")
+    print(HMACKey)
+    print("ct in decrypt")
+    print(ct)
+
+    tag2 = getHMAC(ct, HMACKey)
+
+    if tag2 != tag:
+        raise Exception("The tag is not valid.")
+        return
+
 
 # Inputs
 #   ct: bytes
@@ -101,8 +181,7 @@ def myFileEncryptMAC(filepath):
 #   key: bytes
 # Output
 #   message : bytes
-
-#(message) = myDecrypt(CT, IV, Key)
+# (message) = myDecrypt(CT, IV, Key)
 def myDecrypt(ct, iv, key):
     backend = default_backend()
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
@@ -123,22 +202,6 @@ def myDecrypt(ct, iv, key):
 
     #return message.decode("utf-8")
     return message
-
-# (C, IV, key, ext) = MyfileEncrypt(filepath)
-def myFileEncrypt(filepath):
-    key = urandom(KEY_SIZE_BYTES)
-
-    fr = open(filepath, "rb")
-    message = fr.read()
-
-    (ct, iv) = myEncrypt(message, key)
-
-    fw = open(filepath, "wb")
-    fw.write(ct)
-
-    ext = getExt(filepath)
-
-    return (ct, iv, key, ext)
 
 def myFileDecrypt(filepath, iv, key):
     fr = open(filepath, "rb")
@@ -231,12 +294,44 @@ def test_myEncryptMAC():
 def test_myFileEncryptMAC():
     filepath = "demofile.txt"
     #(ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC()
+    (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC(filepath)
+
+def test_myFileDecryptMAC():
+    filepath = "demofile.txt"
+    (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC(filepath)
+
+    filepath = "demofile.json"
+    myFileDecryptMAC(filepath, HMACKey)
+
+def test_json():
+    r = {'is_claimed': 'True', 'rating': 3.5}
+    str1 = dumps(r)
+    print (str1)
+
+def test_ext():
+    print(getExt("hello.txt"))
+
+# UTF-8 does not work to encode random bytes.
+def test_decode():
+    b1 = b'\x00\x01\xffsd'
+    #str1 = b1.decode('utf-8')
+    str2 = b1.decode('cp437')
+    str3 = b1.decode('utf-8', 'backslashreplace')
+    print(str2)
+    print(str3)
+
+    print(stringToBytes(str3))
 
 #test_myEncryptMAC()
 #test_HMAC()
 #test_file_enc_dec()
 #test_enc_dec()
 #test_padding_functions()
-test_myEncryptMAC()
+#test_myEncryptMAC()
+#test_json()
+#test_ext()
 
+#test_myFileEncryptMAC()
+#test_decode()
+test_myFileDecryptMAC()
 
