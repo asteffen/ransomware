@@ -56,7 +56,6 @@ def myEncrypt(message, key):
     cipher = Cipher(algorithms.AES(key), modes.CBC(iv), backend=backend)
     encryptor = cipher.encryptor()
 
-    #message_bytes = bytes(message, "utf8")
     message_bytes = message
     message_padded = pad_data(message_bytes)
     
@@ -76,6 +75,9 @@ def myEncrypt(message, key):
 # Encrypt then MAC
 def myEncryptMAC(message, EncKey, HMACKey):
     (ct, iv) = myEncrypt(message, EncKey)
+
+    # The input for the HMAC is the ciphertext, not the message.
+    # Because we are doing Encrypt-then-MAC.
     tag = getHMAC(ct, HMACKey)
     return (ct, iv, tag)
 
@@ -108,6 +110,8 @@ def myFileEncrypt(filepath):
 
     return (ct, iv, key, ext)
 
+# Using cp437 instead of utf-8.
+# This is because trying to decode random bytes in utf-8 results in an error.
 def bytesToString(b):
     #return b.decode('utf-8', 'backslashreplace')
     return b.decode('cp437')
@@ -121,16 +125,11 @@ def myFileEncryptMAC(filepath):
     encKey = urandom(KEY_SIZE_BYTES)
     HMACKey = getHMACKey()
 
-    fr = open(filepath, "rb")
-    message = fr.read()
-    (ct, iv) = myEncrypt(message, encKey)
-    fr.close()
+    with open(filepath, "rb") as fr:
+        message = fr.read()
 
     (name, ext) = getExt(filepath)
-
-    # The input for the HMAC is the ciphertext, not the message.
-    # Because we are doing Encrypt-then-MAC.
-    tag = getHMAC(ct, HMACKey)
+    (ct, iv, tag) = myEncryptMAC(message, encKey, HMACKey)
 
     # Convert bytes variables to string
     encKeyStr = bytesToString(encKey)
@@ -141,9 +140,8 @@ def myFileEncryptMAC(filepath):
     jsonDict = {'constant': 'enc', 'encKey': encKeyStr, 'IV': ivStr, 'ciphertext': ctStr, 'ext': ext, 'tag': tagStr}
 
     newFilepath = name + ".json"
-    fw = open(newFilepath, "w")
-    fw.write(dumps(jsonDict))
-    fw.close()
+    with open(newFilepath, "w") as fw:
+        fw.write(dumps(jsonDict))
 
     if DEBUG:
         print("HMac in encrypt")
@@ -157,9 +155,8 @@ def myFileEncryptMAC(filepath):
     return (ct, iv, tag, encKey, HMACKey, ext)
 
 def myFileDecryptMAC(filepath, HMACKey):
-    fr = open(filepath, "r")
-    fileContent = fr.read()
-    fr.close()
+    with open(filepath, "r") as fr:
+        fileContent = fr.read()
 
     # Delete the json file.
     remove(filepath)
@@ -183,13 +180,11 @@ def myFileDecryptMAC(filepath, HMACKey):
 
     (name, ext2) = getExt(filepath)
     origFilepath = name + "." + ext
-    
-    fw = open(origFilepath, "wb")
-    fw.write(message)
-    fw.close()
+
+    with open(origFilepath, "wb") as fw:
+        fw.write(message)
 
     return message
-
 
 # Inputs
 #   ct: bytes
@@ -289,6 +284,7 @@ def demo_HMAC_file():
 
     HMACKey = getHMACKey()
     filepath2 = "demofile.json"
+    #filepath2 = "cat.json"
 
     print("Press enter to decrypt the file.")
     i = input()
