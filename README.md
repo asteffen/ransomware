@@ -1,5 +1,2 @@
-# CECS378
-It is Feb 7th...  
-Tomorrow  
-Test
-111
+# CECS 378 - Introduction to Computer Security Principles
+Lab projects for CECS 378
