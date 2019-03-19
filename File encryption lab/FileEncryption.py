@@ -275,16 +275,16 @@ def test_file_enc_dec():
     myFileDecrypt(filepath, iv, key)
 
 def demo_HMAC_file():
-    filepath = "demofile.txt"
-    #filepath = "cat.jpg"
+    #filepath = "demofile.txt"
+    filepath = "cat.jpg"
 
     print("Press enter to encrypt the file.")
     i = input()
     (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC(filepath)
 
     HMACKey = getHMACKey()
-    filepath2 = "demofile.json"
-    #filepath2 = "cat.json"
+    #filepath2 = "demofile.json"
+    filepath2 = "cat.json"
 
     print("Press enter to decrypt the file.")
     i = input()
@@ -308,6 +308,7 @@ def test_HMAC():
     sig1 = h.finalize()
 
     print(sig1)
+    print(type(sig1))
 
     h = hmac.HMAC(key, hashes.SHA256(), backend=default_backend())
     h.update(data)
@@ -366,4 +367,4 @@ def test_decode():
 #test_decode()
 #test_myFileDecryptMAC()
 demo_HMAC_file()
-
+#test_HMAC()
