@@ -14,8 +14,71 @@ DEBUG = False
 
 # Using a constant HMACKey to make it possible to demo.
 def getHMACKey():
-    #return urandom(HMAC_KEY_SIZE_BYTES)
-    return b'\xffN[\xa7\x93\x9d8\xea!\x15\xb2^=\xebQ\xd1'
+    return urandom(HMAC_KEY_SIZE_BYTES)
+    #return b'\xffN[\xa7\x93\x9d8\xea!\x15\xb2^=\xebQ\xd1'
+
+def getEncKey():
+    return urandom(KEY_SIZE_BYTES)
+
+# Encrypt then MAC
+def myEncryptMAC(message, EncKey, HMACKey):
+    (ct, iv) = myEncrypt(message, EncKey)
+
+    # The input for the HMAC is the ciphertext, not the message.
+    # Because we are doing Encrypt-then-MAC.
+    tag = getHMAC(ct, HMACKey)
+    return (ct, iv, tag)
+
+# return (C, IV, tag, Enckey, HMACKey, ext)
+def myFileEncryptMAC2(filepath):
+    with open(filepath, "rb") as fr:
+        message = fr.read()
+
+    encKey = getEncKey()
+    HMACKey = getHMACKey()
+    (name, ext) = getExt(filepath)
+
+    (ct, iv) = myEncrypt(message, encKey)
+    tag = getHMAC(ct, HMACKey)
+
+    return (ct, iv, tag, encKey, HMACKey, ext)
+
+# (C, IV, tag, Enckey, HMACKey, ext)= MyfileEncryptMAC (filepath)
+def myFileEncryptMAC(filepath):
+    encKey = urandom(KEY_SIZE_BYTES)
+    HMACKey = getHMACKey()
+
+    with open(filepath, "rb") as fr:
+        message = fr.read()
+
+    (name, ext) = getExt(filepath)
+    (ct, iv, tag) = myEncryptMAC(message, encKey, HMACKey)
+
+    # Convert bytes variables to string
+    encKeyStr = bytesToString(encKey)
+    ivStr = bytesToString(iv)
+    ctStr = bytesToString(ct)
+    tagStr = bytesToString(tag)
+
+    jsonDict = {'constant': 'enc', 'encKey': encKeyStr, 'IV': ivStr, 'ciphertext': ctStr, 'ext': ext, 'tag': tagStr}
+
+    newFilepath = name + ".json"
+    with open(newFilepath, "w") as fw:
+        fw.write(dumps(jsonDict))
+
+    if DEBUG:
+        print("HMac in encrypt")
+        print(HMACKey)
+        print("ct in encrypt")
+        print(ct)
+
+    # Delete the original file.
+    remove(filepath)
+
+    return (ct, iv, tag, encKey, HMACKey, ext)
+
+
+
 
 # Get HMAC for the data and key.
 def getHMAC(data, key):
@@ -72,14 +135,6 @@ def myEncrypt(message, key):
     ct = bytes(buf[:len_encrypted]) + encryptor.finalize()
     return (ct, iv)
 
-# Encrypt then MAC
-def myEncryptMAC(message, EncKey, HMACKey):
-    (ct, iv) = myEncrypt(message, EncKey)
-
-    # The input for the HMAC is the ciphertext, not the message.
-    # Because we are doing Encrypt-then-MAC.
-    tag = getHMAC(ct, HMACKey)
-    return (ct, iv, tag)
 
 # Verify then decrypt
 def myDecryptMAC(ct, iv, tag, HMACKey, EncKey):
@@ -120,39 +175,7 @@ def stringToBytes(s):
     #return s.encode('utf-8', 'backslashreplace')
     return s.encode('cp437')
 
-# (C, IV, tag, Enckey, HMACKey, ext)= MyfileEncryptMAC (filepath)
-def myFileEncryptMAC(filepath):
-    encKey = urandom(KEY_SIZE_BYTES)
-    HMACKey = getHMACKey()
 
-    with open(filepath, "rb") as fr:
-        message = fr.read()
-
-    (name, ext) = getExt(filepath)
-    (ct, iv, tag) = myEncryptMAC(message, encKey, HMACKey)
-
-    # Convert bytes variables to string
-    encKeyStr = bytesToString(encKey)
-    ivStr = bytesToString(iv)
-    ctStr = bytesToString(ct)
-    tagStr = bytesToString(tag)
-
-    jsonDict = {'constant': 'enc', 'encKey': encKeyStr, 'IV': ivStr, 'ciphertext': ctStr, 'ext': ext, 'tag': tagStr}
-
-    newFilepath = name + ".json"
-    with open(newFilepath, "w") as fw:
-        fw.write(dumps(jsonDict))
-
-    if DEBUG:
-        print("HMac in encrypt")
-        print(HMACKey)
-        print("ct in encrypt")
-        print(ct)
-
-    # Delete the original file.
-    remove(filepath)
-
-    return (ct, iv, tag, encKey, HMACKey, ext)
 
 def myFileDecryptMAC(filepath, HMACKey):
     with open(filepath, "r") as fr:

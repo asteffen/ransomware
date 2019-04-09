@@ -109,6 +109,14 @@ def test_decode():
 
     print(stringToBytes(str3))
 
+def test_myFileEncryptMAC2():
+    filepath = "demofile.txt"
+    (ct, iv, tag, encKey, HMACKey, ext) = myFileEncryptMAC2(filepath)
+    #print (ct, iv, tag, encKey, HMACKey, ext)
+    print (ct, "\n", iv, "\n", tag, "\n", encKey, "\n", HMACKey, "\n", ext)
+
+
+
 #test_myEncryptMAC()
 #test_HMAC()
 #test_file_enc_dec()
@@ -119,7 +127,9 @@ def test_decode():
 #test_ext()
 
 #test_myFileEncryptMAC()
-test_decode()
+#test_decode()
 #test_myFileDecryptMAC()
 #demo_HMAC_file()
 #test_HMAC()
+test_myFileEncryptMAC2()
+
