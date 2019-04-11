@@ -54,7 +54,7 @@ def myFileEncryptMAC(filepath):
     (name, ext) = getExt(filepath)
     (ct, iv, tag) = myEncryptMAC(message, encKey, HMACKey)
 
-    # Convert bytes variables to string
+    # Convert bytes variables to strings
     encKeyStr = bytesToString(encKey)
     ivStr = bytesToString(iv)
     ctStr = bytesToString(ct)

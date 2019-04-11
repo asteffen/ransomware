@@ -3,6 +3,8 @@ from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
 from os.path import isfile
+from os import remove
+from json import dumps, loads
 import FileEncryption
 
 
@@ -11,8 +13,8 @@ KEY_SIZE_BITS = 2048
 RSA_PUBLIC_KEY_FILEPATH = "public.pem"
 RSA_PRIVATE_KEY_FILEPATH = "private.pem"
 
-# This function does step 1. If the file does not exist,
-# generate keys create the file.
+# This function does step 1.
+# If either pem file does not exist, generate keys and create the files.
 # Return public and private keys.
 def step1():
     public_exists = isfile(RSA_PUBLIC_KEY_FILEPATH)
@@ -34,6 +36,7 @@ def generateRSAKeys():
     public_key = private_key.public_key()
     return (private_key, public_key)
 
+# Return OAEP padding object.
 def getPadding():
     p = padding.OAEP(
         mgf=padding.MGF1(algorithm=hashes.SHA256()),
@@ -50,6 +53,8 @@ def RSADecrypt(ciphertext, private_key):
     message = private_key.decrypt(ciphertext, getPadding())
     return message
 
+# Load the key object from the pem file.
+# is_private: Boolean which specifies whether the key is private or public.
 def loadRSAKeyFile(filepath, is_private):
     if is_private:
         with open(filepath, "rb") as key_file:
@@ -68,6 +73,8 @@ def loadRSAKeyFile(filepath, is_private):
     #public_key = private_key.public_key()
     return key
 
+# Write the key object to the pem file.
+# is_private: Boolean which specifies whether the key is private or public.
 def writeRSAKeyFile(filepath, key, is_private):
     if is_private:
         pem = key.private_bytes(
@@ -83,17 +90,6 @@ def writeRSAKeyFile(filepath, key, is_private):
     with open(filepath, "wb") as key_file:
         key_file.write(pem)
 
-# (RSACipher, C, IV, tag, ext)= MyRSAEncrypt(filepath, RSA_Publickey_filepath):
-def MyRSAEncrypt(filepath, RSA_publickey_filepath):
-    (ct, iv, tag, encKey, HMACKey, ext) = FileEncryption.myFileEncryptMAC2(filepath)
-
-    public_key =  loadRSAKeyFile(RSA_publickey_filepath, False)
-
-    key = encKey + HMACKey
-    RSACipher = RSAEncrypt(key, public_key)
-
-    return (RSACipher, ct, iv, tag, ext)
-
 # splits key into encKey and HMACKey
 def splitKey(key):
     #encKey = key[0:32]
@@ -104,11 +100,87 @@ def splitKey(key):
     HMACKey = key[KEY_SIZE_BYTES : KEY_SIZE_BYTES + HMAC_KEY_SIZE_BYTES]
     return (encKey, HMACKey)
 
+# Calculates the values (RSACipher, C, IV, tag, ext).
+# Does not modify the file.
+def MyRSAEncrypt(filepath, RSA_publickey_filepath):
+    (ct, iv, tag, encKey, HMACKey, ext) = FileEncryption.myFileEncryptMAC2(filepath)
+
+    public_key =  loadRSAKeyFile(RSA_publickey_filepath, False)
+
+    key = encKey + HMACKey
+    RSACipher = RSAEncrypt(key, public_key)
+
+    return (RSACipher, ct, iv, tag, ext)
+
+# Creates JSON file.
+# Deletes the original filepath.
+def MyRSAEncryptFile(filepath, RSA_publickey_filepath):
+    # This calls myFileEncryptMAC2 which generates the encKey and HMACKey.
+    (RSACipher, ct, iv, tag, ext) = MyRSAEncrypt(filepath, RSA_publickey_filepath)
+
+    # Call getExt to get the name of the file.
+    (name, _) = FileEncryption.getExt(filepath)
+
+    # Convert bytes variables to strings
+    bytesToString = FileEncryption.bytesToString
+    RSACipherStr = bytesToString(RSACipher)
+    ivStr = bytesToString(iv)
+    ctStr = bytesToString(ct)
+    tagStr = bytesToString(tag)
+
+    jsonDict = {
+        'RSACipher': RSACipherStr,
+        'ciphertext': ctStr,
+        'iv': ivStr,
+        'tag': tagStr,
+        'ext': ext}
+
+    newFilepath = name + ".json"
+    with open(newFilepath, "w") as fw:
+        fw.write(dumps(jsonDict, indent=4))
+
+    # Delete the original file.
+    remove(filepath)
+
+    return (RSACipher, ct, iv, tag, ext)
+
+
+# decrypts JSON file.
+# writes the plaintext to original filepath.
+# Deletes the json file.
+def MyRSADecryptFile(filepath, RSA_privatekey_filepath):
+    with open(filepath, "r") as fr:
+        fileContent = fr.read()
+    jsonDict = loads(fileContent)
+
+    # Delete the json file.
+    remove(filepath)
+
+    stringToBytes = FileEncryption.stringToBytes
+    ext = jsonDict['ext']
+    RSACipher = stringToBytes(jsonDict['RSACipher'])
+    iv = stringToBytes(jsonDict['iv'])
+    ct = stringToBytes(jsonDict['ciphertext'])
+    tag = stringToBytes(jsonDict['tag'])
+
+    message = MyRSADecrypt(RSACipher, ct, iv, tag, ext, RSA_privatekey_filepath)
+
+    (name, _) = FileEncryption.getExt(filepath)
+    origFilepath = name + "." + ext
+
+    with open(origFilepath, "wb") as fw:
+        fw.write(message)
+
+    return message
+
 # message = MyRSADecrypt(RSACipher, C, IV, tag, ext)
-def MyRSADecrypt(RSACipher, C, IV, tag, ext, RSA_privatekey_filepath):
+def MyRSADecrypt(RSACipher, ct, iv, tag, ext, RSA_privatekey_filepath):
     private_key =  loadRSAKeyFile(RSA_privatekey_filepath, True)
     key = RSADecrypt(RSACipher, private_key)
     (encKey, HMACKey) = splitKey(key)
+
+    message = FileEncryption.myDecryptMAC(ct, iv, tag, HMACKey, encKey)
+    return message
 
 
 
@@ -141,12 +213,35 @@ def test_MyRSAEncrypt():
     (RSACipher, C, IV, tag, ext) = MyRSAEncrypt(filepath, RSA_publickey_filepath)
 
     RSA_privatekey_filepath = RSA_PRIVATE_KEY_FILEPATH
-    MyRSADecrypt(RSACipher, C, IV, tag, ext, RSA_privatekey_filepath)
+    message = MyRSADecrypt(RSACipher, C, IV, tag, ext, RSA_privatekey_filepath)
+    print(message)
+
+def test_MyRSAEncryptFile():
+    filepath = "demofile.txt"
+    RSA_publickey_filepath = RSA_PUBLIC_KEY_FILEPATH
+    MyRSAEncryptFile(filepath, RSA_publickey_filepath)
+
+def test_MyRSADecryptFile():
+    filepath = "demofile.json"
+    RSA_privatekey_filepath = RSA_PRIVATE_KEY_FILEPATH
+    MyRSADecryptFile(filepath, RSA_privatekey_filepath)
+
+def demo_MyRSAEncryptFile():
+    print("Press enter to encrypt the file.")
+    i = input()
+    test_MyRSAEncryptFile()
+
+    print("Press enter to decrypt the file.")
+    i = input()
+    test_MyRSADecryptFile()
 
 #test_RSAEncrypt()
 #test_writeRSAKeyFile()
 #test_loadRSAKeyFile()
-test_MyRSAEncrypt()
+#test_MyRSAEncrypt()
+#test_MyRSAEncryptFile()
+#test_MyRSADecryptFile()
+demo_MyRSAEncryptFile()
 
 #print(FileEncryption.getHMACKey())
 #step1()
