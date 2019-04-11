@@ -2,21 +2,19 @@ from cryptography.hazmat.primitives.asymmetric.rsa import generate_private_key
 from cryptography.hazmat.primitives.asymmetric import padding
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.backends import default_backend
-from os.path import isfile
-from os import remove
+from os.path import isfile, join, splitext
+from os import remove, walk
 from json import dumps, loads
 import FileEncryption
 
-
 PUBLIC_EXPONENT = 65537
 KEY_SIZE_BITS = 2048
-RSA_PUBLIC_KEY_FILEPATH = "public.pem"
-RSA_PRIVATE_KEY_FILEPATH = "private.pem"
+RSA_PUBLIC_KEY_FILEPATH = ".\public.pem"
+RSA_PRIVATE_KEY_FILEPATH = ".\private.pem"
 
 # This function does step 1.
 # If either pem file does not exist, generate keys and create the files.
-# Return public and private keys.
-def step1():
+def checkAndCreatePEMFiles():
     public_exists = isfile(RSA_PUBLIC_KEY_FILEPATH)
     private_exists = isfile(RSA_PRIVATE_KEY_FILEPATH)
 
@@ -24,8 +22,6 @@ def step1():
         (private_key, public_key) = generateRSAKeys()
         writeRSAKeyFile(RSA_PRIVATE_KEY_FILEPATH, private_key, True)
         writeRSAKeyFile(RSA_PUBLIC_KEY_FILEPATH, public_key, False)
-
-    return (private_key, public_key)
 
 def generateRSAKeys():
     private_key = generate_private_key(
@@ -118,8 +114,7 @@ def MyRSAEncryptFile(filepath, RSA_publickey_filepath):
     # This calls myFileEncryptMAC2 which generates the encKey and HMACKey.
     (RSACipher, ct, iv, tag, ext) = MyRSAEncrypt(filepath, RSA_publickey_filepath)
 
-    # Call getExt to get the name of the file.
-    (name, _) = FileEncryption.getExt(filepath)
+    (name, _) = splitext(filepath)
 
     # Convert bytes variables to strings
     bytesToString = FileEncryption.bytesToString
@@ -165,7 +160,7 @@ def MyRSADecryptFile(filepath, RSA_privatekey_filepath):
 
     message = MyRSADecrypt(RSACipher, ct, iv, tag, ext, RSA_privatekey_filepath)
 
-    (name, _) = FileEncryption.getExt(filepath)
+    (name, _) = splitext(filepath)
     origFilepath = name + "." + ext
 
     with open(origFilepath, "wb") as fw:
@@ -182,7 +177,30 @@ def MyRSADecrypt(RSACipher, ct, iv, tag, ext, RSA_privatekey_filepath):
     message = FileEncryption.myDecryptMAC(ct, iv, tag, HMACKey, encKey)
     return message
 
+def encryptDir(directory, RSA_publickey_filepath):
+    for root, dirs, files in walk(directory, topdown=False):
+        for name in files:
+            filepath = join(root, name)
 
+            #do not encrypt the RSA Private Key file
+            if filepath == RSA_PRIVATE_KEY_FILEPATH:
+                continue
+
+            MyRSAEncryptFile(filepath, RSA_publickey_filepath)
+            print("Encrypted file: " + filepath)
+
+def decryptDir(directory, RSA_privatekey_filepath):
+    for root, dirs, files in walk(directory, topdown=False):
+        for name in files:
+            filepath = join(root, name)
+
+            # make sure it is a json file.
+            (_, ext) = splitext(filepath)
+            if ext != '.json':
+                continue
+
+            MyRSADecryptFile(filepath, RSA_privatekey_filepath)
+            print("Decrypted file: " + filepath)
 
 def test_RSAEncrypt():
     message = b"encrypted data23"
@@ -235,13 +253,36 @@ def demo_MyRSAEncryptFile():
     i = input()
     test_MyRSADecryptFile()
 
+def test_encryptDir():
+    directory = ".\TestDir"
+    RSA_publickey_filepath = RSA_PUBLIC_KEY_FILEPATH
+    encryptDir(directory, RSA_publickey_filepath)
+
+def test_decryptDir():
+    directory = ".\TestDir"
+    RSA_privatekey_filepath = RSA_PRIVATE_KEY_FILEPATH
+    decryptDir(directory, RSA_privatekey_filepath)
+
+def demo_encryptDir():
+    print("Press enter to encrypt the file.")
+    i = input()
+    test_encryptDir()
+
+    print("Press enter to decrypt the file.")
+    i = input()
+    test_decryptDir()
+
+
 #test_RSAEncrypt()
 #test_writeRSAKeyFile()
 #test_loadRSAKeyFile()
 #test_MyRSAEncrypt()
 #test_MyRSAEncryptFile()
 #test_MyRSADecryptFile()
-demo_MyRSAEncryptFile()
+#demo_MyRSAEncryptFile()
 
-#print(FileEncryption.getHMACKey())
-#step1()
+#checkAndCreatePEMFiles()
+#test_encryptDir()
+#test_decryptDir()
+demo_encryptDir()
+
