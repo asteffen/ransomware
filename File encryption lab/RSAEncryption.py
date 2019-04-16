@@ -9,8 +9,9 @@ import FileEncryption
 
 PUBLIC_EXPONENT = 65537
 KEY_SIZE_BITS = 2048
-RSA_PUBLIC_KEY_FILEPATH = ".\public.pem"
-RSA_PRIVATE_KEY_FILEPATH = ".\private.pem"
+RSA_PUBLIC_KEY_FILEPATH = "./public.pem"
+RSA_PRIVATE_KEY_FILEPATH = "./private.pem"
+DO_NOT_ENCRYPT_LIST = [RSA_PUBLIC_KEY_FILEPATH, RSA_PRIVATE_KEY_FILEPATH]
 
 # This function does step 1.
 # If either pem file does not exist, generate keys and create the files.
@@ -182,8 +183,8 @@ def encryptDir(directory, RSA_publickey_filepath):
         for name in files:
             filepath = join(root, name)
 
-            #do not encrypt the RSA Private Key file
-            if filepath == RSA_PRIVATE_KEY_FILEPATH:
+            # do not encrypt the files in DO_NOT_ENCRYPT_LIST
+            if filepath in DO_NOT_ENCRYPT_LIST:
                 continue
 
             MyRSAEncryptFile(filepath, RSA_publickey_filepath)
@@ -271,7 +272,6 @@ def demo_encryptDir():
     print("Press enter to decrypt the file.")
     i = input()
     test_decryptDir()
-
 
 #test_RSAEncrypt()
 #test_writeRSAKeyFile()
