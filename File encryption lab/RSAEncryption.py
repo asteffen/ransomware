@@ -275,12 +275,14 @@ def demo_encryptDir():
 
 def main_encryptDir():
     directory = ENCRYPTION_DIRECTORY
-    test_encryptDir(directory)
+    RSA_publickey_filepath = "C:\stuff\school2\_2019spring\cecs378\CECS378\File encryption lab\public.pem"
+    encryptDir(directory, RSA_publickey_filepath)
     i = input()
 
 def main_decryptDir():
     directory = ENCRYPTION_DIRECTORY
-    test_decryptDir(directory)
+    RSA_privatekey_filepath = "C:\stuff\school2\_2019spring\cecs378\CECS378\File encryption lab\private.pem"
+    decryptDir(directory, RSA_privatekey_filepath)
     i = input()
 
 #test_RSAEncrypt()
@@ -296,5 +298,9 @@ def main_decryptDir():
 #test_decryptDir()
 #demo_encryptDir()
 
-#main_encryptDir()
-demo_encryptDir()
+
+
+#checkAndCreatePEMFiles()
+#demo_encryptDir()
+
+main_decryptDir()
