@@ -4,7 +4,7 @@ block_cipher = None
 
 
 a = Analysis(['RSAEncryption.py'],
-             pathex=['C:\\stuff\\school2\\_2019spring\\cecs378\\CECS378\\File encryption lab'],
+             pathex=['/Users/xinbeishen/Desktop/CSULB/CECS 378/CECS378-master/CECS378/File encryption lab'],
              binaries=[],
              datas=[],
              hiddenimports=[],
