@@ -12,6 +12,7 @@ KEY_SIZE_BITS = 2048
 RSA_PUBLIC_KEY_FILEPATH = "./public.pem"
 RSA_PRIVATE_KEY_FILEPATH = "./private.pem"
 DO_NOT_ENCRYPT_LIST = [RSA_PUBLIC_KEY_FILEPATH, RSA_PRIVATE_KEY_FILEPATH]
+ENCRYPTION_DIRECTORY = "C:\stuff\school2\_2019spring\cecs378\CECS378\File encryption lab\TestDir"
 
 # This function does step 1.
 # If either pem file does not exist, generate keys and create the files.
@@ -254,24 +255,33 @@ def demo_MyRSAEncryptFile():
     i = input()
     test_MyRSADecryptFile()
 
-def test_encryptDir():
-    directory = ".\TestDir"
+def test_encryptDir(directory):
     RSA_publickey_filepath = RSA_PUBLIC_KEY_FILEPATH
     encryptDir(directory, RSA_publickey_filepath)
 
-def test_decryptDir():
-    directory = ".\TestDir"
+def test_decryptDir(directory):
     RSA_privatekey_filepath = RSA_PRIVATE_KEY_FILEPATH
     decryptDir(directory, RSA_privatekey_filepath)
 
 def demo_encryptDir():
+    directory = ".\TestDir"
     print("Press enter to encrypt the file.")
     i = input()
-    test_encryptDir()
+    test_encryptDir(directory)
 
     print("Press enter to decrypt the file.")
     i = input()
-    test_decryptDir()
+    test_decryptDir(directory)
+
+def main_encryptDir():
+    directory = ENCRYPTION_DIRECTORY
+    test_encryptDir(directory)
+    i = input()
+
+def main_decryptDir():
+    directory = ENCRYPTION_DIRECTORY
+    test_decryptDir(directory)
+    i = input()
 
 #test_RSAEncrypt()
 #test_writeRSAKeyFile()
@@ -284,5 +294,7 @@ def demo_encryptDir():
 #checkAndCreatePEMFiles()
 #test_encryptDir()
 #test_decryptDir()
-demo_encryptDir()
+#demo_encryptDir()
 
+#main_encryptDir()
+demo_encryptDir()
