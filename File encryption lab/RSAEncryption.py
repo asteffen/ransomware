@@ -16,14 +16,14 @@ KEY_SIZE_BITS = 2048
 OS = system()
 if OS == 'Darwin':
     PROJECT_DIRECTORY = "/Users/xinbeishen/Desktop/CSULB/CECS 378/CECS378-master/CECS378"
-else if OS == 'Windows':
+elif OS == 'Windows':
     PROJECT_DIRECTORY = "C:/stuff/school2/_2019spring/cecs378/CECS378"
 else:
     raise Exception('Unsupported OS')
 
 ENCRYPTION_DIRECTORY = join(PROJECT_DIRECTORY, "File encryption lab/TestDir")
-RSA_PRIVATE_KEY_FILEPATH = join(PROJECT_DIRECTORY "File encryption lab/private.pem")
-RSA_PUBLIC_KEY_FILEPATH = join(PROJECT_DIRECTORY "File encryption lab/public.pem")
+RSA_PRIVATE_KEY_FILEPATH = join(PROJECT_DIRECTORY, "File encryption lab/private.pem")
+RSA_PUBLIC_KEY_FILEPATH = join(PROJECT_DIRECTORY, "File encryption lab/public.pem")
 DO_NOT_ENCRYPT_LIST = [RSA_PUBLIC_KEY_FILEPATH, RSA_PRIVATE_KEY_FILEPATH]
 
 # This function does step 1.
