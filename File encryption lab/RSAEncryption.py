@@ -17,7 +17,7 @@ OS = system()
 if OS == 'Darwin':
     PROJECT_DIRECTORY = "/Users/xinbeishen/Desktop/CSULB/CECS 378/CECS378-master/CECS378"
 else if OS == 'Windows':
-    PROJECT_DIRECTORY = "C:\stuff\school2\_2019spring\cecs378\CECS378"
+    PROJECT_DIRECTORY = "C:/stuff/school2/_2019spring/cecs378/CECS378"
 else:
     raise Exception('Unsupported OS')
 
