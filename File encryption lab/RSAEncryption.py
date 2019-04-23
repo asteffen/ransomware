@@ -44,6 +44,7 @@ def generateRSAKeys():
         backend=default_backend()
     )
     public_key = private_key.public_key()
+    print("Generated RSA Keys")
     return (private_key, public_key)
 
 # Return OAEP padding object.
