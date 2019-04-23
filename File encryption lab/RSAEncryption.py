@@ -5,14 +5,26 @@ from cryptography.hazmat.backends import default_backend
 from os.path import isfile, join, splitext
 from os import remove, walk
 from json import dumps, loads
+from platform import system
 import FileEncryption
 
 PUBLIC_EXPONENT = 65537
 KEY_SIZE_BITS = 2048
-RSA_PUBLIC_KEY_FILEPATH = "./public.pem"
-RSA_PRIVATE_KEY_FILEPATH = "./private.pem"
+# RSA_PUBLIC_KEY_FILEPATH = "./public.pem"
+# RSA_PRIVATE_KEY_FILEPATH = "./private.pem"
+
+OS = system()
+if OS == 'Darwin':
+    PROJECT_DIRECTORY = "/Users/xinbeishen/Desktop/CSULB/CECS 378/CECS378-master/CECS378"
+else if OS == 'Windows':
+    PROJECT_DIRECTORY = "C:\stuff\school2\_2019spring\cecs378\CECS378"
+else:
+    raise Exception('Unsupported OS')
+
+ENCRYPTION_DIRECTORY = join(PROJECT_DIRECTORY, "File encryption lab/TestDir")
+RSA_PRIVATE_KEY_FILEPATH = join(PROJECT_DIRECTORY "File encryption lab/private.pem")
+RSA_PUBLIC_KEY_FILEPATH = join(PROJECT_DIRECTORY "File encryption lab/public.pem")
 DO_NOT_ENCRYPT_LIST = [RSA_PUBLIC_KEY_FILEPATH, RSA_PRIVATE_KEY_FILEPATH]
-ENCRYPTION_DIRECTORY = "/Users/xinbeishen/Desktop/CSULB/CECS 378/CECS378-master/CECS378/File encryption lab/TestDir"
 
 # This function does step 1.
 # If either pem file does not exist, generate keys and create the files.
@@ -274,14 +286,16 @@ def demo_encryptDir():
     test_decryptDir(directory)
 
 def main_encryptDir():
+    checkAndCreatePEMFiles()
+    
     directory = ENCRYPTION_DIRECTORY
-    RSA_publickey_filepath = "/Users/xinbeishen/Desktop/CSULB/CECS 378/CECS378-master/CECS378/File encryption lab/public.pem"
+    RSA_publickey_filepath = RSA_PUBLIC_KEY_FILEPATH
     encryptDir(directory, RSA_publickey_filepath)
     i = input()
 
 def main_decryptDir():
     directory = ENCRYPTION_DIRECTORY
-    RSA_privatekey_filepath = "/Users/xinbeishen/Desktop/CSULB/CECS 378/CECS378-master/CECS378/File encryption lab/private.pem"
+    RSA_privatekey_filepath = RSA_PRIVATE_KEY_FILEPATH
     decryptDir(directory, RSA_privatekey_filepath)
     i = input()
 
@@ -298,10 +312,8 @@ def main_decryptDir():
 #test_decryptDir()
 #demo_encryptDir()
 
-
-
 #checkAndCreatePEMFiles()
 #demo_encryptDir()
 
-main_decryptDir()
+#main_decryptDir()
 #main_encryptDir()
