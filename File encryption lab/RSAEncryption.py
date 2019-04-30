@@ -362,12 +362,20 @@ def requestGetByPubkey(pubkey):
     return data
 
 def test_requestGetByPubkey(pubkey):
-    p = readPubKey()
-    z = requestGetByPubkey(pp)
+    #p = readPubKey()
+    p = pubkey
+    z = requestGetByPubkey(p)
+    print_formatted(z)
     print(len(z))
 
 
+#data = requestGet()
+#print_formatted(data)
 #requestPostKeys()
-#print_formatted(requestGet())
+
+test_requestGetByPubkey("tomato")
+
+
+
 
 
