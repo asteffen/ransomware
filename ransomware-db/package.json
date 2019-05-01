@@ -19,6 +19,7 @@
   "homepage": "https://github.com/iamshaunjp/rest-api-playlist#readme",
   "dependencies": {
     "express": "^4.16.4",
-    "mongoose": "^5.5.2"
+    "mongoose": "^5.5.2",
+    "node-fetch": "^2.5.0"
   }
 }

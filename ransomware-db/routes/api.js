@@ -1,9 +1,35 @@
 const express = require ('express');
 const router = express.Router();
 const KeyModel = require('../models/key');
+const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+//const fetch = require("node-fetch");
+
+//var appkey =
+//fetch('../app_key.txt')
+//    .then(response => response.text())
+//    .then(text => console.log(text));
+
+function loadFile(filePath) {
+    var result = null;
+    var xmlhttp = new XMLHttpRequest();
+    xmlhttp.open("GET", filePath, false);
+    xmlhttp.send();
+    if (xmlhttp.status==200) {
+        result = xmlhttp.responseText;
+    }
+    return result;
+}
+
+var f = loadFile('app_key.txt');
+console.log(f);
 
 // GET request handler
 router.get('/keys', function(req, res, next){
+    //console.log(req.headers["appkey"]);
+    if (req.headers["appkey"] != "qwe") {
+        res.send("Wrong appkey");
+        return;
+    }
     // if there is no URL parameter, send the whole key database
     if (req.query.pubkey == null) {
         KeyModel.find({}).then(function(keys){
