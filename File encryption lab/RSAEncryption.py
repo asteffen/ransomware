@@ -357,7 +357,7 @@ def requestGetByPubkey(pubkey):
     pubkey_encoded = urllib.parse.quote(pubkey, safe='')
     url = API_ENDPOINT + "?pubkey=" + pubkey_encoded
     
-    r = requests.get(url = url)
+    r = requests.get(url = url, headers={"appkey": "qwe"})
     data = r.json()
     return data
 
