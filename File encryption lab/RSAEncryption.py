@@ -312,9 +312,6 @@ def main_decryptDir():
     i = input()
 
 
-
-
-
 # Print each line of the list returned by GET
 def print_formatted(data):
     for v in data:
@@ -339,6 +336,8 @@ def test_readKeys():
     print(pub)
     print(priv)
 
+# Send a GET request to the server with no URL parameter.
+# The server will respond with all items in the database.
 def requestGet():
     r = requests.get(url = API_ENDPOINT, headers={"appkey": APP_KEY})
     if r.content == b'Wrong appkey':
@@ -346,6 +345,7 @@ def requestGet():
     data = r.json()
     return data
 
+# Post the key pair (pubkey, privkey) to the server so it is stored in the database.
 def requestPost(pubkey, privkey):
     resultList = requestGetByPubkey(pubkey)
     if len(resultList) > 0:
@@ -368,6 +368,7 @@ def requestPost(pubkey, privkey):
 def requestPostKeys():
     requestPost(readPubKey(), readPrivKey())
 
+# Query the server to look up the private key corresponding to the given public key.
 def requestGetByPubkey(pubkey):
     pubkey_encoded = urllib.parse.quote(pubkey, safe='')
     url = API_ENDPOINT + "?pubkey=" + pubkey_encoded
@@ -421,7 +422,9 @@ def loadKeyFromText(t):
         password=None,
         backend=default_backend()
     )
+    return key
 
+# Retrieve private key, write it to file, decrypt directory, delete private key.
 def main_decryptDirServer():
     # retrieve private key from server
     pubkey = readPubKey()
@@ -436,6 +439,7 @@ def main_decryptDirServer():
     with open(RSA_PRIVATE_KEY_FILEPATH, "w") as key_file:
         key_file.write(privKeySerialized)
 
+    # decrypt directory
     directory = ENCRYPTION_DIRECTORY
     RSA_privatekey_filepath = RSA_PRIVATE_KEY_FILEPATH
     decryptDir(directory, RSA_privatekey_filepath)
