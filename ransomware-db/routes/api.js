@@ -2,6 +2,7 @@ const express = require ('express');
 const router = express.Router();
 const KeyModel = require('../models/key');
 const XMLHttpRequest = require("xmlhttprequest").XMLHttpRequest;
+const AppKey = "qwe";
 //const fetch = require("node-fetch");
 
 //var appkey =
@@ -20,13 +21,13 @@ function loadFile(filePath) {
     return result;
 }
 
-var f = loadFile('app_key.txt');
-console.log(f);
+//var f = loadFile('app_key.txt');
+//console.log(f);
 
 // GET request handler
 router.get('/keys', function(req, res, next){
     //console.log(req.headers["appkey"]);
-    if (req.headers["appkey"] != "qwe") {
+    if (req.headers["appkey"] != AppKey) {
         res.send("Wrong appkey");
         return;
     }
@@ -46,10 +47,12 @@ router.get('/keys', function(req, res, next){
 
 // add a new key object to database.
 router.post('/keys', function(req, res, next){
-    //var ninja = new Ninja(req.body);
-    //ninja.save();
-    KeyModel.create(req.body).then(function(ninja){
-        res.send(ninja);
+    if (req.headers["appkey"] != AppKey) {
+        res.send("Wrong appkey");
+        return;
+    }
+    KeyModel.create(req.body).then(function(key1){
+        res.send(key1);
     }).catch(next);
 });
 
