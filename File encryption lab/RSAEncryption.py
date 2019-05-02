@@ -28,6 +28,7 @@ RSA_PRIVATE_KEY_FILEPATH = join(PROJECT_DIRECTORY, "File encryption lab/private.
 RSA_PUBLIC_KEY_FILEPATH = join(PROJECT_DIRECTORY, "File encryption lab/public.pem")
 DO_NOT_ENCRYPT_LIST = [RSA_PUBLIC_KEY_FILEPATH, RSA_PRIVATE_KEY_FILEPATH]
 API_ENDPOINT = "https://breakfast1.me/api/keys"
+APP_KEY = "qwe"
 
 # This function does step 1.
 # If either pem file does not exist, generate keys and create the files.
@@ -332,7 +333,9 @@ def test_readKeys():
     print(priv)
 
 def requestGet():
-    r = requests.get(url = API_ENDPOINT)
+    r = requests.get(url = API_ENDPOINT, headers={"appkey": APP_KEY})
+    if r.content == b'Wrong appkey':
+        raise Exception('Wrong appkey')
     data = r.json()
     return data
 
@@ -346,9 +349,14 @@ def requestPost(pubkey, privkey):
         "privkey": privkey
     }
 
-    r = requests.post(url = API_ENDPOINT, json = data)
+    r = requests.post(url = API_ENDPOINT, json = data, headers={"appkey": APP_KEY})
     if r.status_code != 200:
         raise Exception("Server Error")
+    if r.content == b'Wrong appkey':
+        raise Exception('Wrong appkey')
+
+    print("Posted data: ")
+    print(data)
 
 def requestPostKeys():
     requestPost(readPubKey(), readPrivKey())
@@ -357,24 +365,32 @@ def requestGetByPubkey(pubkey):
     pubkey_encoded = urllib.parse.quote(pubkey, safe='')
     url = API_ENDPOINT + "?pubkey=" + pubkey_encoded
     
-    r = requests.get(url = url, headers={"appkey": "qwe"})
+    r = requests.get(url = url, headers={"appkey": APP_KEY})
+    if r.content == b'Wrong appkey':
+        raise Exception('Wrong appkey')
+
     data = r.json()
     return data
 
-def test_requestGetByPubkey(pubkey):
+def test_requestGetByPubkey():
     #p = readPubKey()
-    p = pubkey
+    p = "tomato"
     z = requestGetByPubkey(p)
     print_formatted(z)
     print(len(z))
 
+def test_requestGet():
+    data = requestGet()
+    print_formatted(data)
+    print(len(data))
 
-#data = requestGet()
-#print_formatted(data)
-#requestPostKeys()
+def test_requestPostKeys():
+    checkAndCreatePEMFiles()
+    requestPostKeys()
 
-test_requestGetByPubkey("tomato")
-
+#test_requestGetByPubkey()
+#test_requestPostKeys()
+test_requestGet()
 
 
 
